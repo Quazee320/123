@@ -1,10 +1,6 @@
 import telebot
-
-TOKEN = "7083901949:AAFBtRVRGVX_4OFMHgdIoI_L9IY4UHQucDE"
-bot = telebot.TeleBot(TOKEN)
-
-ADMIN_ID = 2057965337  # твой Telegram ID
-import telebot
+from flask import Flask
+from threading import Thread
 
 # =========================
 # Настройки бота
@@ -18,12 +14,26 @@ bot = telebot.TeleBot(TOKEN)
 # Словарь: message_id администратора -> id пользователя
 reply_map = {}
 
+# ====== keep_alive ======
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    Thread(target=run).start()
+# ========================
+
 # Команда /start
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(
         message.chat.id,
-        "✉️ Привет! Напиши сообщение — я буду рад его прочитать"
+        "✉️ Привет! Напиши сообщение — админ сможет ответить анонимно"
     )
 
 # Обработка всех сообщений
@@ -42,7 +52,7 @@ def handle_message(message):
 
         bot.send_message(
             user_id,
-            f"📨 Ответ от Кваса:\n\n{message.text}"
+            f"📨 Ответ администратора:\n\n{message.text}"
         )
 
         bot.send_message(
@@ -68,6 +78,9 @@ def handle_message(message):
             message.chat.id,
             "✅ Сообщение отправлено"
         )
+
+# ====== запускаем keep_alive ======
+keep_alive()
 
 print("Бот запущен и ждёт сообщения...")
 bot.polling(non_stop=True)
