@@ -1,6 +1,5 @@
 import telebot
-from flask import Flask
-from threading import Thread
+from webserver import keep_alive
 
 # =========================
 # Настройки бота
@@ -14,19 +13,9 @@ bot = telebot.TeleBot(TOKEN)
 # Словарь: message_id администратора -> id пользователя
 reply_map = {}
 
-# ====== keep_alive ======
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is alive"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    Thread(target=run).start()
-# ========================
+# ====== Запускаем веб-сервер для keep_alive ======
+keep_alive()
+# ================================================
 
 # Команда /start
 @bot.message_handler(commands=['start'])
@@ -79,8 +68,7 @@ def handle_message(message):
             "✅ Сообщение отправлено"
         )
 
-# ====== запускаем keep_alive ======
-keep_alive()
-
-print("Бот запущен и ждёт сообщения...")
+print("Бот запущен и ждёт сообщений...")
 bot.polling(non_stop=True)
+
+
