@@ -10,75 +10,110 @@ ADMIN_ID = 2057965337
 # =========================
 
 bot = telebot.TeleBot(TOKEN)
+
+# message_id администратора -> user_id
 reply_map = {}
 
 # ====== Запускаем веб-сервер ======
 keep_alive()
 # =================================
 
-# Получаем публичный URL Replit и выводим в консоль
-repl_id = os.environ.get("REPL_SLUG")  # имя проекта
-username = os.environ.get("REPL_OWNER")  # никнейм
+# Пытаемся вывести URL
+repl_id = os.environ.get("REPL_SLUG")
+username = os.environ.get("REPL_OWNER")
 if repl_id and username:
-    url = f"https://{repl_id}.{username}.repl.co"
-    print(f"✅ Публичный URL для UptimeRobot: {url}")
+    print(f"✅ Публичный URL: https://{repl_id}.{username}.repl.co")
 else:
-    print("⚠️ Не удалось определить URL автоматически. Используй Open in a new tab")
+    print("⚠️ URL не найден автоматически (это нормально на Replit)")
 
-# ==
-# Словарь: message_id администратора -> id пользователя
-reply_map = {}
-
-# Команда /start
+# =========================
+# /start
+# =========================
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(
         message.chat.id,
-        "✉️ Привет! Напиши сообщение — админ сможет ответить анонимно"
+        "✉️ Напиши сообщение — админ сможет ответить анонимно"
     )
 
-# Обработка всех сообщений
-@bot.message_handler(func=lambda m: True)
-def handle_message(message):
+# =========================
+# ТЕКСТ
+# =========================
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
 
-    # =================================
-    # Если сообщение от админа и это ответ на чужое сообщение
-    # =================================
+    # Ответ админа
     if (
         message.from_user.id == ADMIN_ID
         and message.reply_to_message
         and message.reply_to_message.message_id in reply_map
     ):
         user_id = reply_map[message.reply_to_message.message_id]
-
-        bot.send_message(
-            user_id,
-            f"📨 Ответ администратора:\n\n{message.text}"
-        )
-
-        bot.send_message(
-            ADMIN_ID,
-            "✅ Ответ отправлен"
-        )
+        bot.send_message(user_id, f"📨 Ответ администратора:\n\n{message.text}")
+        bot.send_message(ADMIN_ID, "✅ Ответ отправлен")
         return
 
-    # =================================
-    # Любое другое сообщение (от анонима или админа)
-    # =================================
     sent = bot.send_message(
         ADMIN_ID,
         f"📩 Анонимное сообщение:\n\n{message.text}"
     )
-
-    # Сохраняем соответствие, чтобы ответить позже
     reply_map[sent.message_id] = message.from_user.id
 
-    # Подтверждение отправителю (кроме админа, чтобы не спамить самому себе)
     if message.from_user.id != ADMIN_ID:
-        bot.send_message(
-            message.chat.id,
-            "✅ Сообщение отправлено"
-        )
+        bot.send_message(message.chat.id, "✅ Сообщение отправлено")
 
-print("Бот запущен и ждёт сообщения...")
+# =========================
+# ФОТО
+# =========================
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+
+    caption = message.caption or ""
+    file_id = message.photo[-1].file_id
+
+    sent = bot.send_photo(
+        ADMIN_ID,
+        file_id,
+        caption=f"📷 Анонимное фото\n\n{caption}"
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Фото отправлено")
+
+# =========================
+# ВИДЕО
+# =========================
+@bot.message_handler(content_types=['video'])
+def handle_video(message):
+
+    caption = message.caption or ""
+    file_id = message.video.file_id
+
+    sent = bot.send_video(
+        ADMIN_ID,
+        file_id,
+        caption=f"🎥 Анонимное видео\n\n{caption}"
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Видео отправлено")
+
+# =========================
+# СТИКЕРЫ
+# =========================
+@bot.message_handler(content_types=['sticker'])
+def handle_sticker(message):
+
+    sent = bot.send_sticker(
+        ADMIN_ID,
+        message.sticker.file_id
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Стикер отправлен")
+
+print("🤖 Бот запущен и работает")
 bot.polling(non_stop=True)
