@@ -5,7 +5,7 @@ import os
 # =========================
 # Настройки бота
 # =========================
-TOKEN = "7083901949:AAFBtRVRGVX_4OFMHgdIoI_L9IY4UHQucDE"
+TOKEN = "7083901949:AAEOzhoCB4g78onl8A-oUAf3-eVSI3Z1mwI"
 ADMIN_ID = 2057965337
 # =========================
 
@@ -117,3 +117,4 @@ def handle_sticker(message):
 
 print("🤖 Бот запущен и работает")
 bot.polling(non_stop=True)
+
