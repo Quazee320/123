@@ -1,33 +1,41 @@
 import telebot
 from webserver import keep_alive
+import uuid
+import json
 import os
 
 # =========================
 # НАСТРОЙКИ
 # =========================
-TOKEN = "7083901949:AAEOzhoCB4g78onl8A-oUAf3-eVSI3Z1mwI"
+TOKEN = "7083901949:AAEOzhoCB4g78onl8A-oUAf3-eVSI3Z1mwIа"
 ADMIN_ID = 2057965337
+DB_FILE = "messages.json"
 # =========================
 
 bot = telebot.TeleBot(TOKEN)
 
-# message_id админа -> user_id
-reply_map = {}
-
-# ====== WEB SERVER (Replit + UptimeRobot) ======
-keep_alive()
-
-repl_id = os.environ.get("REPL_SLUG")
-username = os.environ.get("REPL_OWNER")
-if repl_id and username:
-    print(f"✅ Публичный URL: https://{repl_id}.{username}.repl.co")
+# =========================
+# БАЗА
+# =========================
+if os.path.exists(DB_FILE):
+    with open(DB_FILE, "r", encoding="utf-8") as f:
+        msg_db = json.load(f)
 else:
-    print("⚠️ URL определить не удалось (это нормально)")
+    msg_db = {}
+
+def save_db():
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(msg_db, f)
+
+# =========================
+# WEB SERVER
+# =========================
+keep_alive()
 
 # =========================
 # /start
 # =========================
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=["start"])
 def start(message):
     bot.send_message(
         message.chat.id,
@@ -35,27 +43,49 @@ def start(message):
     )
 
 # =========================
+# УНИВЕРСАЛЬНЫЙ ОТВЕТ АДМИНА
+# =========================
+def try_admin_reply(message):
+    if message.from_user.id != ADMIN_ID:
+        return False
+
+    if not message.reply_to_message:
+        return False
+
+    text = (
+        message.reply_to_message.text
+        or message.reply_to_message.caption
+        or ""
+    )
+
+    for uid, user_id in msg_db.items():
+        if f"[ID:{uid}]" in text:
+            bot.send_message(
+                user_id,
+                f"📨 Ответ администратора:\n\n{message.text}"
+            )
+            bot.send_message(ADMIN_ID, "✅ Ответ отправлен")
+            return True
+
+    return False
+
+# =========================
 # ТЕКСТ
 # =========================
-@bot.message_handler(content_types=['text'])
+@bot.message_handler(content_types=["text"])
 def handle_text(message):
 
-    # Ответ админа
-    if (
-        message.from_user.id == ADMIN_ID
-        and message.reply_to_message
-        and message.reply_to_message.message_id in reply_map
-    ):
-        user_id = reply_map[message.reply_to_message.message_id]
-        bot.send_message(user_id, f"📨 Ответ администратора:\n\n{message.text}")
-        bot.send_message(ADMIN_ID, "✅ Ответ отправлен")
+    if try_admin_reply(message):
         return
 
-    sent = bot.send_message(
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
+
+    bot.send_message(
         ADMIN_ID,
-        f"📩 Анонимное сообщение:\n\n{message.text}"
+        f"📩 Анонимное сообщение:\n\n{message.text}\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Сообщение отправлено")
@@ -63,18 +93,20 @@ def handle_text(message):
 # =========================
 # ФОТО
 # =========================
-@bot.message_handler(content_types=['photo'])
+@bot.message_handler(content_types=["photo"])
 def handle_photo(message):
 
-    caption = message.caption or ""
-    file_id = message.photo[-1].file_id
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
 
-    sent = bot.send_photo(
+    caption = message.caption or ""
+
+    bot.send_photo(
         ADMIN_ID,
-        file_id,
-        caption=f"📷 Анонимное фото\n\n{caption}"
+        message.photo[-1].file_id,
+        caption=f"📷 Анонимное фото\n\n{caption}\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Фото отправлено")
@@ -82,18 +114,20 @@ def handle_photo(message):
 # =========================
 # ВИДЕО
 # =========================
-@bot.message_handler(content_types=['video'])
+@bot.message_handler(content_types=["video"])
 def handle_video(message):
 
-    caption = message.caption or ""
-    file_id = message.video.file_id
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
 
-    sent = bot.send_video(
+    caption = message.caption or ""
+
+    bot.send_video(
         ADMIN_ID,
-        file_id,
-        caption=f"🎥 Анонимное видео\n\n{caption}"
+        message.video.file_id,
+        caption=f"🎥 Анонимное видео\n\n{caption}\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Видео отправлено")
@@ -101,18 +135,20 @@ def handle_video(message):
 # =========================
 # ГИФКИ
 # =========================
-@bot.message_handler(content_types=['animation'])
+@bot.message_handler(content_types=["animation"])
 def handle_gif(message):
 
-    caption = message.caption or ""
-    file_id = message.animation.file_id
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
 
-    sent = bot.send_animation(
+    caption = message.caption or ""
+
+    bot.send_animation(
         ADMIN_ID,
-        file_id,
-        caption=f"🎞 Анонимная гифка\n\n{caption}"
+        message.animation.file_id,
+        caption=f"🎞 Анонимная гифка\n\n{caption}\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Гифка отправлена")
@@ -120,33 +156,42 @@ def handle_gif(message):
 # =========================
 # СТИКЕРЫ
 # =========================
-@bot.message_handler(content_types=['sticker'])
+@bot.message_handler(content_types=["sticker"])
 def handle_sticker(message):
 
-    sent = bot.send_sticker(
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
+
+    bot.send_sticker(
         ADMIN_ID,
         message.sticker.file_id
     )
-    reply_map[sent.message_id] = message.from_user.id
+    bot.send_message(
+        ADMIN_ID,
+        f"[ID:{uid}]"
+    )
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Стикер отправлен")
 
 # =========================
-# АУДИО (mp3 и т.п.)
+# АУДИО
 # =========================
-@bot.message_handler(content_types=['audio'])
+@bot.message_handler(content_types=["audio"])
 def handle_audio(message):
 
-    caption = message.caption or ""
-    file_id = message.audio.file_id
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
 
-    sent = bot.send_audio(
+    caption = message.caption or ""
+
+    bot.send_audio(
         ADMIN_ID,
-        file_id,
-        caption=f"🎵 Анонимное аудио\n\n{caption}"
+        message.audio.file_id,
+        caption=f"🎵 Анонимное аудио\n\n{caption}\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Аудио отправлено")
@@ -154,17 +199,18 @@ def handle_audio(message):
 # =========================
 # ГОЛОСОВЫЕ
 # =========================
-@bot.message_handler(content_types=['voice'])
+@bot.message_handler(content_types=["voice"])
 def handle_voice(message):
 
-    file_id = message.voice.file_id
+    uid = str(uuid.uuid4())[:8]
+    msg_db[uid] = message.from_user.id
+    save_db()
 
-    sent = bot.send_voice(
+    bot.send_voice(
         ADMIN_ID,
-        file_id,
-        caption="🎤 Анонимное голосовое"
+        message.voice.file_id,
+        caption=f"🎤 Анонимное голосовое\n\n[ID:{uid}]"
     )
-    reply_map[sent.message_id] = message.from_user.id
 
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Голосовое отправлено")
