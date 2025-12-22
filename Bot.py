@@ -3,7 +3,7 @@ from webserver import keep_alive
 import os
 
 # =========================
-# Настройки бота
+# НАСТРОЙКИ
 # =========================
 TOKEN = "7083901949:AAEOzhoCB4g78onl8A-oUAf3-eVSI3Z1mwI"
 ADMIN_ID = 2057965337
@@ -11,20 +11,18 @@ ADMIN_ID = 2057965337
 
 bot = telebot.TeleBot(TOKEN)
 
-# message_id администратора -> user_id
+# message_id админа -> user_id
 reply_map = {}
 
-# ====== Запускаем веб-сервер ======
+# ====== WEB SERVER (Replit + UptimeRobot) ======
 keep_alive()
-# =================================
 
-# Пытаемся вывести URL
 repl_id = os.environ.get("REPL_SLUG")
 username = os.environ.get("REPL_OWNER")
 if repl_id and username:
     print(f"✅ Публичный URL: https://{repl_id}.{username}.repl.co")
 else:
-    print("⚠️ URL не найден автоматически (это нормально на Replit)")
+    print("⚠️ URL определить не удалось (это нормально)")
 
 # =========================
 # /start
@@ -101,6 +99,25 @@ def handle_video(message):
         bot.send_message(message.chat.id, "✅ Видео отправлено")
 
 # =========================
+# ГИФКИ
+# =========================
+@bot.message_handler(content_types=['animation'])
+def handle_gif(message):
+
+    caption = message.caption or ""
+    file_id = message.animation.file_id
+
+    sent = bot.send_animation(
+        ADMIN_ID,
+        file_id,
+        caption=f"🎞 Анонимная гифка\n\n{caption}"
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Гифка отправлена")
+
+# =========================
 # СТИКЕРЫ
 # =========================
 @bot.message_handler(content_types=['sticker'])
@@ -115,6 +132,42 @@ def handle_sticker(message):
     if message.from_user.id != ADMIN_ID:
         bot.send_message(message.chat.id, "✅ Стикер отправлен")
 
+# =========================
+# АУДИО (mp3 и т.п.)
+# =========================
+@bot.message_handler(content_types=['audio'])
+def handle_audio(message):
+
+    caption = message.caption or ""
+    file_id = message.audio.file_id
+
+    sent = bot.send_audio(
+        ADMIN_ID,
+        file_id,
+        caption=f"🎵 Анонимное аудио\n\n{caption}"
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Аудио отправлено")
+
+# =========================
+# ГОЛОСОВЫЕ
+# =========================
+@bot.message_handler(content_types=['voice'])
+def handle_voice(message):
+
+    file_id = message.voice.file_id
+
+    sent = bot.send_voice(
+        ADMIN_ID,
+        file_id,
+        caption="🎤 Анонимное голосовое"
+    )
+    reply_map[sent.message_id] = message.from_user.id
+
+    if message.from_user.id != ADMIN_ID:
+        bot.send_message(message.chat.id, "✅ Голосовое отправлено")
+
 print("🤖 Бот запущен и работает")
 bot.polling(non_stop=True)
-
