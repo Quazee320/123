@@ -7,7 +7,7 @@ import os
 # =========================
 # НАСТРОЙКИ
 # =========================
-TOKEN = "7083901949:AAEOzhoCB4g78onl8A-oUAf3-eVSI3Z1mwIа"
+TOKEN = "7083901949:AAHjnpfUiDeg8SlSJBhfNkz7NRtv8MBUJCk"
 ADMIN_ID = 2057965337
 DB_FILE = "messages.json"
 # =========================
@@ -217,3 +217,4 @@ def handle_voice(message):
 
 print("🤖 Бот запущен и работает")
 bot.polling(non_stop=True)
+
