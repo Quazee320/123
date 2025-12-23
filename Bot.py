@@ -15,17 +15,18 @@ DB_FILE = "messages.json"
 bot = telebot.TeleBot(TOKEN)
 
 # =========================
-# БАЗА
+# БАЗА ДАННЫХ
 # =========================
-if os.path.exists(DB_FILE):
-    with open(DB_FILE, "r", encoding="utf-8") as f:
-        msg_db = json.load(f)
-else:
-    msg_db = {}
+if not os.path.exists(DB_FILE):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f)
+
+with open(DB_FILE, "r", encoding="utf-8") as f:
+    msg_db = json.load(f)
 
 def save_db():
     with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(msg_db, f)
+        json.dump(msg_db, f, ensure_ascii=False, indent=2)
 
 # =========================
 # WEB SERVER
@@ -43,7 +44,7 @@ def start(message):
     )
 
 # =========================
-# УНИВЕРСАЛЬНЫЙ ОТВЕТ АДМИНА
+# ПОПЫТКА ОТВЕТА АДМИНА
 # =========================
 def try_admin_reply(message):
     if message.from_user.id != ADMIN_ID:
@@ -52,14 +53,14 @@ def try_admin_reply(message):
     if not message.reply_to_message:
         return False
 
-    text = (
+    original = (
         message.reply_to_message.text
         or message.reply_to_message.caption
         or ""
     )
 
     for uid, user_id in msg_db.items():
-        if f"[ID:{uid}]" in text:
+        if f"[ID:{uid}]" in original:
             bot.send_message(
                 user_id,
                 f"📨 Ответ администратора:\n\n{message.text}"
@@ -67,7 +68,8 @@ def try_admin_reply(message):
             bot.send_message(ADMIN_ID, "✅ Ответ отправлен")
             return True
 
-    return False
+    bot.send_message(ADMIN_ID, "❌ Не удалось найти пользователя для ответа")
+    return True
 
 # =========================
 # ТЕКСТ
@@ -108,8 +110,7 @@ def handle_photo(message):
         caption=f"📷 Анонимное фото\n\n{caption}\n\n[ID:{uid}]"
     )
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Фото отправлено")
+    bot.send_message(message.chat.id, "✅ Фото отправлено")
 
 # =========================
 # ВИДЕО
@@ -129,8 +130,7 @@ def handle_video(message):
         caption=f"🎥 Анонимное видео\n\n{caption}\n\n[ID:{uid}]"
     )
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Видео отправлено")
+    bot.send_message(message.chat.id, "✅ Видео отправлено")
 
 # =========================
 # ГИФКИ
@@ -150,8 +150,7 @@ def handle_gif(message):
         caption=f"🎞 Анонимная гифка\n\n{caption}\n\n[ID:{uid}]"
     )
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Гифка отправлена")
+    bot.send_message(message.chat.id, "✅ Гифка отправлена")
 
 # =========================
 # СТИКЕРЫ
@@ -163,17 +162,10 @@ def handle_sticker(message):
     msg_db[uid] = message.from_user.id
     save_db()
 
-    bot.send_sticker(
-        ADMIN_ID,
-        message.sticker.file_id
-    )
-    bot.send_message(
-        ADMIN_ID,
-        f"[ID:{uid}]"
-    )
+    bot.send_sticker(ADMIN_ID, message.sticker.file_id)
+    bot.send_message(ADMIN_ID, f"[ID:{uid}]")
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Стикер отправлен")
+    bot.send_message(message.chat.id, "✅ Стикер отправлен")
 
 # =========================
 # АУДИО
@@ -193,8 +185,7 @@ def handle_audio(message):
         caption=f"🎵 Анонимное аудио\n\n{caption}\n\n[ID:{uid}]"
     )
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Аудио отправлено")
+    bot.send_message(message.chat.id, "✅ Аудио отправлено")
 
 # =========================
 # ГОЛОСОВЫЕ
@@ -212,8 +203,7 @@ def handle_voice(message):
         caption=f"🎤 Анонимное голосовое\n\n[ID:{uid}]"
     )
 
-    if message.from_user.id != ADMIN_ID:
-        bot.send_message(message.chat.id, "✅ Голосовое отправлено")
+    bot.send_message(message.chat.id, "✅ Голосовое отправлено")
 
 print("🤖 Бот запущен и работает")
 bot.polling(non_stop=True)
